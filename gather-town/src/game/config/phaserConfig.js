@@ -3,8 +3,8 @@ import MainScene from "../scenes/MainScene";
 
 const phaserConfig = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
+  width: 1520,
+  height: 620,
   parent: "game-container",
   pixelArt: true,
   physics: {

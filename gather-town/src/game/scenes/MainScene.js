@@ -83,45 +83,66 @@ export default class MainScene extends Phaser.Scene {
   create() {
     const map = this.make.tilemap({ key: "map" });
 
-    // === AUTO-BIND ALL TILESETS ===
-    const tilesets = map.tilesets.map((tileset) =>
-      map.addTilesetImage(tileset.name, tileset.name)
+    const tilesets = map.tilesets.map(ts =>
+      map.addTilesetImage(ts.name, ts.name)
     );
 
-    // === CREATE LAYERS (ORDER SAME AS TILED) ===
+    // Floors
     map.createLayer("green-bg", tilesets);
     map.createLayer("design-floor", tilesets);
     map.createLayer("yellow-floor", tilesets);
     map.createLayer("sec-floor", tilesets);
 
-    const wallLayer = map.createLayer("wall", tilesets);
+    // Visual layers
+    map.createLayer("wall", tilesets);
     map.createLayer("main-wall", tilesets);
     map.createLayer("furniture", tilesets);
     map.createLayer("chair", tilesets);
     map.createLayer("plants", tilesets);
 
-    this.player = new Player(this, 200, 200);
-    this.cameras.main.startFollow(this.player);
-    this.cameras.main.setBounds(
-      0,
-      0,
-      map.widthInPixels,
-      map.heightInPixels
+    // ✅ CREATE PLAYER FIRST
+    this.player = new Player(
+      this,
+      map.widthInPixels / 2,
+      map.heightInPixels / 2
     );
+    
+    // --- COLLISION OBJECTS ---
+    const collisionLayer = map.getObjectLayer("collision");
+    this.walls = this.physics.add.staticGroup();
+
+    collisionLayer.objects.forEach(obj => {
+      const rect = this.add.rectangle(
+        obj.x + obj.width / 2,
+        obj.y + obj.height / 2,
+        obj.width,
+        obj.height
+      );
+
+      rect.setVisible(false); // true to debug
+      this.physics.add.existing(rect, true);
+      this.walls.add(rect);
+    });
+
+    // ✅ ADD COLLIDER AFTER PLAYER EXISTS
+    this.physics.add.collider(this.player, this.walls);
+
+    // Camera
+    this.cameras.main.startFollow(this.player);
+    this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
     // World bounds
-    this.physics.world.setBounds(
-      0,
-      0,
-      map.widthInPixels,
-      map.heightInPixels
-    );
+    this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
   }
 
-  
+
+
+
   update() {
-  this.player.update();
-}
+    this.player.update();
+    console.log('Player Position:', this.player.x, this.player.y);
+
+  }
 }
 
 
