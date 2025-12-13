@@ -1,16 +1,137 @@
-# React + Vite
+# 🗺️ Step-1: Initial Map Load (Phaser + React + Vite)
+Branch
+`
+Initial-map-Load`
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Goal of this Step
 
-Currently, two official plugins are available:
+`The goal of this branch is to successfully load and render a Tiled map inside a Phaser game, embedded within a React + Vite application, using a clean and scalable folder structure.`
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+This step focuses only on map loading — no player, no movement, no UI logic yet.
 
-## React Compiler
+✅ What Is Working in This Branch
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+React + Vite app setup
 
-## Expanding the ESLint configuration
+Phaser game integrated into React
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Tiled map (g-1.json) loads correctly
+
+All tilesets are correctly bound
+
+Multiple layers render in correct order
+
+Wall layer has collision enabled
+
+Game is accessible through a route (/game)
+
+
+
+# 🧱 Project Structure (Important)
+`src/
+│
+├─ apps/                     # React application layer
+│  ├─ pages/
+│  │  ├─ Home.jsx            # Entry page
+│  │  └─ GamePage.jsx        # Page that mounts the game
+│  ├─ router.jsx             # App routes
+│  └─ App.jsx                # Router provider
+│
+├─ game/                     # Phaser game module (isolated)
+│  ├─ Game.tsx               # React ↔ Phaser bridge
+│  ├─ config/
+│  │  └─ phaserConfig.ts     # Phaser engine configuration
+│  └─ scenes/
+│     └─ MainScene.ts        # Map loading & layer setup
+│
+└─ main.jsx                  # Vite entry
+
+📁 Public Assets
+public/
+│
+├─ maps/
+│  └─ g-1.json               # Tiled map file
+│
+└─ tiles/
+   └─ *.png                  # Individual tileset images
+
+`
+
+# All assets are served from public/ so Phaser can load them using absolute paths.
+
+# 🎮  How the Game Loads (Flow)
+
+User opens /
+
+Clicks Enter Office
+
+Route navigates to /game
+
+GamePage.jsx mounts <Game />
+
+Game.tsx creates a Phaser instance
+
+Phaser starts MainScene
+
+MainScene.preload() loads:
+
+Tiled map JSON
+
+All tileset images
+
+MainScene.create():
+
+Creates tilemap
+
+Auto-binds tilesets
+
+Creates layers in order
+
+Enables wall collisions
+
+# 🧠 Key Design Decisions
+✔ Separation of Concerns
+
+React handles routing & layout
+
+Phaser handles game logic
+
+Scenes contain gameplay logic only
+
+Config contains engine setup only
+
+✔ Scalable Architecture
+
+This structure supports:
+
+Multiple maps
+
+Multiple scenes
+
+Multiplayer logic later
+
+UI overlays later
+
+# 🚫 What Is Intentionally NOT Included
+
+Player sprite
+
+Movement
+
+Camera follow
+
+Interactions
+
+UI / HUD
+
+These will be added in later branches.
+
+# 🔖 Commit Message
+(Step-1) Initial Map Load Process
+
+➡️ Next Step (Next Branch)
+
+Step-2: Player spawn & collision
+Branch idea:
+
+Step-2-Player-Spawn
