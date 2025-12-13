@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import Player from "../objects/Player";
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -74,6 +75,9 @@ export default class MainScene extends Phaser.Scene {
       "WallpaperExploration",
       "/tiles/WallpaperExploration.png"
     );
+
+    this.load.image("player", "/sprites/player.png");
+
   }
 
   create() {
@@ -96,9 +100,16 @@ export default class MainScene extends Phaser.Scene {
     map.createLayer("chair", tilesets);
     map.createLayer("plants", tilesets);
 
-    // Collision
-    wallLayer.setCollisionByProperty({ collides: true });
+    this.player = new Player(this, 200, 200);
+    this.cameras.main.startFollow(this.player);
+    this.cameras.main.setBounds(
+      0,
+      0,
+      map.widthInPixels,
+      map.heightInPixels
+    );
 
+    // World bounds
     this.physics.world.setBounds(
       0,
       0,
@@ -106,4 +117,11 @@ export default class MainScene extends Phaser.Scene {
       map.heightInPixels
     );
   }
+
+  
+  update() {
+  this.player.update();
 }
+}
+
+
