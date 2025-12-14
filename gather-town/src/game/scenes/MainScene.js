@@ -1,23 +1,22 @@
 import Phaser from "phaser";
 import Player from "../objects/Player";
+import { socket } from "../../apps/socket";
 
 export default class MainScene extends Phaser.Scene {
-  constructor() {
+  constructor(userId, roomId) {
     super("MainScene");
+    this.userId = userId;
+    this.roomId = roomId;
   }
 
   preload() {
-    // Load map
     this.load.tilemapTiledJSON("map", "/maps/g-1.json");
 
-    // === LOAD ALL TILESETS USED IN TILED ===
+    // tilesets (same as yours)
     this.load.image("booth", "/tiles/booth.png");
     this.load.image("booth big black [5x5]", "/tiles/booth big black [5x5].png");
     this.load.image("botanical_garden", "/tiles/botanical_garden.png");
-    this.load.image(
-      "cabinet_chippendale_thin_arch",
-      "/tiles/cabinet_chippendale_thin_arch.png"
-    );
+    this.load.image("cabinet_chippendale_thin_arch", "/tiles/cabinet_chippendale_thin_arch.png");
     this.load.image("chair_neonoir", "/tiles/chair_neonoir.png");
     this.load.image("chair_small (1)", "/tiles/chair_small (1).png");
     this.load.image("chair_space", "/tiles/chair_space.png");
@@ -37,76 +36,55 @@ export default class MainScene extends Phaser.Scene {
     this.load.image("life support", "/tiles/life support.png");
     this.load.image("m-bg", "/tiles/m-bg.png");
     this.load.image("more walls", "/tiles/more walls.png");
-    this.load.image(
-      "office_filecabinets",
-      "/tiles/office_filecabinets.png"
-    );
-    this.load.image(
-      "officeplants[1x1]",
-      "/tiles/officeplants[1x1].png"
-    );
-    this.load.image(
-      "officeplants[2x1]",
-      "/tiles/officeplants[2x1].png"
-    );
-    this.load.image(
-      "plant_potted_skinny_terracotta",
-      "/tiles/plant_potted_skinny_terracotta.png"
-    );
+    this.load.image("office_filecabinets", "/tiles/office_filecabinets.png");
+    this.load.image("officeplants[1x1]", "/tiles/officeplants[1x1].png");
+    this.load.image("officeplants[2x1]", "/tiles/officeplants[2x1].png");
+    this.load.image("plant_potted_skinny_terracotta", "/tiles/plant_potted_skinny_terracotta.png");
     this.load.image("planter_boxes", "/tiles/planter_boxes.png");
-    this.load.image(
-      "Room_Builder_free_32x32",
-      "/tiles/Room_Builder_free_32x32.png"
-    );
+    this.load.image("Room_Builder_free_32x32", "/tiles/Room_Builder_free_32x32.png");
     this.load.image("roundtable", "/tiles/roundtable.png");
     this.load.image("shelf-1", "/tiles/shelf-1.png");
     this.load.image("sofa", "/tiles/sofa.png");
     this.load.image("straigh table1", "/tiles/straigh table1.png");
-    this.load.image(
-      "table_round_marble",
-      "/tiles/table_round_marble.png"
-    );
+    this.load.image("table_round_marble", "/tiles/table_round_marble.png");
     this.load.image("vending_machine", "/tiles/vending_machine.png");
-    this.load.image(
-      "vending_machine@2x",
-      "/tiles/vending_machine@2x.png"
-    );
-    this.load.image(
-      "WallpaperExploration",
-      "/tiles/WallpaperExploration.png"
-    );
+    this.load.image("vending_machine@2x", "/tiles/vending_machine@2x.png");
+    this.load.image("WallpaperExploration", "/tiles/WallpaperExploration.png");
 
     this.load.image("player", "/sprites/player.png");
-
   }
 
   create() {
-    const map = this.make.tilemap({ key: "map" });
+    this.players = {}; // all players (local + remote)
 
+    const map = this.make.tilemap({ key: "map" });
     const tilesets = map.tilesets.map(ts =>
       map.addTilesetImage(ts.name, ts.name)
     );
 
-    // Floors
+    // floors
     map.createLayer("green-bg", tilesets);
     map.createLayer("design-floor", tilesets);
     map.createLayer("yellow-floor", tilesets);
     map.createLayer("sec-floor", tilesets);
 
-    // Visual layers
+    // visuals
     map.createLayer("wall", tilesets);
     map.createLayer("main-wall", tilesets);
     map.createLayer("furniture", tilesets);
     map.createLayer("chair", tilesets);
     map.createLayer("plants", tilesets);
 
-    // ✅ CREATE PLAYER FIRST
-    this.player = new Player(
+    // --- LOCAL PLAYER ---
+    this.localPlayer = new Player(
       this,
       map.widthInPixels / 2,
-      map.heightInPixels / 2
+      map.heightInPixels / 2,
+      true
     );
-    
+
+    this.players[this.userId] = this.localPlayer;
+
     // --- COLLISION OBJECTS ---
     const collisionLayer = map.getObjectLayer("collision");
     this.walls = this.physics.add.staticGroup();
@@ -119,30 +97,54 @@ export default class MainScene extends Phaser.Scene {
         obj.height
       );
 
-      rect.setVisible(false); // true to debug
+      rect.setVisible(false);
       this.physics.add.existing(rect, true);
       this.walls.add(rect);
     });
 
-    // ✅ ADD COLLIDER AFTER PLAYER EXISTS
-    this.physics.add.collider(this.player, this.walls);
+    this.physics.add.collider(this.localPlayer, this.walls);
 
-    // Camera
-    this.cameras.main.startFollow(this.player);
+    // camera
+    this.cameras.main.startFollow(this.localPlayer);
     this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-
-    // World bounds
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+
+    // 🔥 SOCKET LISTENER (THIS WAS MISSING)
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type !== "player_pos") return;
+
+      const { userId, x, y } = data.payload;
+
+      // ignore self
+      if (userId === this.userId) return;
+
+      // create remote player
+      if (!this.players[userId]) {
+        const remotePlayer = new Player(this, x, y, false);
+        remotePlayer.setTint(0x00ff00); // green remote players
+        this.players[userId] = remotePlayer;
+      } else {
+        this.players[userId].setPosition(x, y);
+      }
+    };
   }
-
-
-
 
   update() {
-    this.player.update();
-    console.log('Player Position:', this.player.x, this.player.y);
+    if (!this.localPlayer) return;
 
+    this.localPlayer.update();
+
+    // send my position
+    socket.send(JSON.stringify({
+      type: "pos",
+      payload: {
+        id: this.roomId,
+        userId: this.userId,
+        x: this.localPlayer.x,
+        y: this.localPlayer.y
+      }
+    }));
   }
 }
-
-

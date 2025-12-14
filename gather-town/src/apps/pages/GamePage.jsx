@@ -1,9 +1,9 @@
+import { useLocation } from "react-router-dom";
 import Game from "../../game/Game";
 
 export default function GamePage() {
-  return (
-    <div style={{ width: "100vw", height: "100vh" }}>
-      <Game />
-    </div>
-  );
+  const { state } = useLocation();
+  const { userId, roomId } = state;
+
+  return <Game userId={userId} roomId={roomId} />;
 }
