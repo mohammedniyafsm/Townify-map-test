@@ -7,6 +7,7 @@ const phaserConfig = {
   height: 620,
   parent: "game-container",
   pixelArt: true,
+  roundPixels: true,
   physics: {
     default: "arcade",
     arcade: { debug: true }

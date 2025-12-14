@@ -80,7 +80,8 @@ export default class MainScene extends Phaser.Scene {
       this,
       map.widthInPixels / 2,
       map.heightInPixels / 2,
-      true
+      true,
+      this.userId
     );
 
     this.players[this.userId] = this.localPlayer;
@@ -118,7 +119,7 @@ export default class MainScene extends Phaser.Scene {
         players.forEach(p => {
           if (p.userId === this.userId) return;
 
-          const remote = new Player(this, p.x, p.y, false);
+          const remote = new Player(this, p.x, p.y, false, p.userId);
           remote.setTint(0x00ff00);
           this.players[p.userId] = remote;
         });
@@ -134,14 +135,16 @@ export default class MainScene extends Phaser.Scene {
         if (userId === this.userId) return;
 
         if (!this.players[userId]) {
-          // create sprite if it does not exist
-          const remote = new Player(this, x, y, false);
+          const remote = new Player(this, x, y, false, userId);
           remote.setTint(0x00ff00);
           this.players[userId] = remote;
         } else {
-          this.players[userId].setPosition(x, y);
+          const player = this.players[userId];
+          player.setPosition(x, y);
+          player.syncName(); // 🔥 THIS WAS MISSING
         }
       }
+
 
 
       if (data.type === "player_left") {
@@ -169,7 +172,7 @@ export default class MainScene extends Phaser.Scene {
         id: this.roomId,
         userId: this.userId,
         x: this.localPlayer.x,
-        y: this.localPlayer.y
+        y: this.localPlayer.y,
       }
     }));
   }
