@@ -1,4 +1,5 @@
 import { createServer } from "http";
+import { json } from "stream/consumers";
 import { WebSocketServer, WebSocket } from "ws";
 
 interface PlayerState {
@@ -14,18 +15,23 @@ interface RoomI {
   players: Map<string, PlayerState>;
 }
 
+interface WSWithUser extends WebSocket {
+  userId?: string;
+}
+
 const rooms = new Map<string, RoomI>();
 
 const server = createServer();
-server.listen(3000, "0.0.0.0",() => {
+server.listen(3000, "0.0.0.0", () => {
   console.log("✅ Server running on port 3000");
 });
 
 const wss = new WebSocketServer({ server });
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws: WSWithUser) => {
   const userId = Math.random().toString(36).slice(2, 9);
   console.log("User connected:", userId);
+  ws.userId = userId;
 
   ws.send(JSON.stringify({
     type: "connected",
@@ -60,15 +66,15 @@ wss.on("connection", (ws) => {
 
       ws.send(JSON.stringify({
         type: "joined_room",
-        payload: { roomId: room.id, userId }
+        payload: { roomId: room.id, userId, players: Array.from(room.players.values()) }
       }));
 
-      room.sockets.forEach(s =>
-        s.send(JSON.stringify({
-          type: "player_joined",
-          payload: { userId }
-        }))
-      );
+      // room.sockets.forEach(s =>
+      //   s.send(JSON.stringify({
+      //     type: "player_joined",
+      //     payload: { userId }
+      //   }))
+      // );
     }
 
     // PLAYER POSITION
@@ -85,12 +91,40 @@ wss.on("connection", (ws) => {
         }))
       );
     }
+
+    
   });
 
   ws.on("close", () => {
-    rooms.forEach(room => {
-      room.sockets.delete(userId);
-      room.players.delete(userId);
+    let leftRoomId: string | null = null;
+
+    // find room & remove user
+    rooms.forEach((room, roomId) => {
+      if (room.sockets.has(userId)) {
+        room.sockets.delete(userId);
+        room.players.delete(userId);
+        leftRoomId = roomId;
+
+        // 🔥 notify remaining players
+        room.sockets.forEach(s =>
+          s.send(JSON.stringify({
+            type: "player_left",
+            payload: { userId }
+          }))
+        );
+      }
     });
+
+    // optional: delete empty room
+    if (leftRoomId) {
+      const room = rooms.get(leftRoomId);
+      if (room && room.sockets.size === 0) {
+        rooms.delete(leftRoomId);
+      }
+    }
+
+    console.log("User disconnected:", ws.userId);
   });
+
+
 });

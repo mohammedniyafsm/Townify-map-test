@@ -113,22 +113,48 @@ export default class MainScene extends Phaser.Scene {
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      if (data.type !== "player_pos") return;
+      if (data.type == "joined_room") {
+        const { players } = data.payload;
+        players.forEach(p => {
+          if (p.userId === this.userId) return;
 
-      const { userId, x, y } = data.payload;
-
-      // ignore self
-      if (userId === this.userId) return;
-
-      // create remote player
-      if (!this.players[userId]) {
-        const remotePlayer = new Player(this, x, y, false);
-        remotePlayer.setTint(0x00ff00); // green remote players
-        this.players[userId] = remotePlayer;
-      } else {
-        this.players[userId].setPosition(x, y);
+          const remote = new Player(this, p.x, p.y, false);
+          remote.setTint(0x00ff00);
+          this.players[p.userId] = remote;
+        });
       }
+
+      // if (data.type == "player_joined") {
+      //   const { userId } = data.payload;
+      // }
+
+
+      if (data.type === "player_pos") {
+        const { userId, x, y } = data.payload;
+        if (userId === this.userId) return;
+
+        if (!this.players[userId]) {
+          // create sprite if it does not exist
+          const remote = new Player(this, x, y, false);
+          remote.setTint(0x00ff00);
+          this.players[userId] = remote;
+        } else {
+          this.players[userId].setPosition(x, y);
+        }
+      }
+
+
+      if (data.type === "player_left") {
+        const { userId } = data.payload;
+        const player = this.players[userId];
+        if (!player) return;
+        player.destroy();        // remove sprite from scene
+        delete this.players[userId]; // remove reference
+      }
+
     };
+
+
   }
 
   update() {
