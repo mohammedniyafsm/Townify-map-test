@@ -103,7 +103,25 @@ export default class MainScene extends Phaser.Scene {
       this.walls.add(rect);
     });
 
+    // --- FURNITURE COLLISION OBJECTS ---
+    const furnitureCollisionLayer = map.getObjectLayer("furniture-collision");
+    this.furniture = this.physics.add.staticGroup();
+
+    furnitureCollisionLayer.objects.forEach(obj => {
+      const rect = this.add.rectangle(
+        obj.x + obj.width / 2,
+        obj.y + obj.height / 2,
+        obj.width,
+        obj.height
+      );
+
+      rect.setVisible(false); // invisible collision box
+      this.physics.add.existing(rect, true);
+      this.furniture.add(rect);
+    });
+
     this.physics.add.collider(this.localPlayer, this.walls);
+    this.physics.add.collider(this.localPlayer, this.furniture);
 
     // camera
     this.cameras.main.startFollow(this.localPlayer);
